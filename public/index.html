@@ -3,36 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <title>HACCP Katarina</title>
+  <style>
+    body { font-family: Arial; max-width: 1000px; margin: 20px auto; padding: 20px; background: #f5f5f5; }
+   .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h2 { color: #1a5fb4; margin-top: 0; }
+    input, button { padding: 12px; margin: 8px 0; font-size: 16px; }
+    button { background: #1a5fb4; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #0d4a8f; }
+    button:disabled { background: #ccc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #1a5fb4; color: white; }
+   .prolaz { background: #26a269; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+   .pad { background: #c01c28; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+   .info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 15px 0; }
+   .info div { background: #f0f0f0; padding: 10px; border-radius: 5px; }
+   .info strong { color: #1a5fb4; }
+  </style>
 </head>
-<body style="font-family:Arial; padding:20px;">
-  <h2>HACCP Sken - Hotel Katarina</h2>
-  <p>Učitaj otpremnicu u PDF ili JPG format</p>
-  
-  <input type="file" id="file" accept=".pdf,.jpg,.jpeg,.png">
-  <br><br>
-  <button onclick="upload()" style="padding:10px 20px;">Skeniraj</button>
-  
-  <h3>Rezultat:</h3>
-  <pre id="result" style="background:#f0f0f0; padding:10px;"></pre>
+<body>
+  <div class="card">
+    <h2>HACCP Sken - Hotel Katarina</h2>
+    <p>Učitaj otpremnicu u PDF ili JPG formatu:</p>
+    
+    <input type="file" id="file" accept=".pdf,.jpg,.jpeg,.png">
+    <button id="btn" onclick="upload()">Skeniraj otpremnicu</button>
+    
+    <div id="rezultat"></div>
+  </div>
 
   <script>
     async function upload() {
       const file = document.getElementById('file').files[0];
-      if (!file) {
-        alert('Prvo odaberi fajl!');
-        return;
-      }
+      const btn = document.getElementById('btn');
+      const rezultat = document.getElementById('rezultat');
+      
+      if (!file) { alert('Prvo odaberi fajl!'); return; }
+      
+      btn.disabled = true;
+      btn.textContent = 'Čitam...';
+      rezultat.innerHTML = '<p>Analiziram otpremnicu, pričekaj 10-20 sekundi...</p>';
+      
       const formData = new FormData();
       formData.append('otpremnica', file);
-      document.getElementById('result').textContent = 'Čitam otpremnicu... pričekaj 10-20 sec';
       
       try {
         const res = await fetch('/api/scan', { method: 'POST', body: formData });
         const data = await res.json();
-        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.error) throw new Error(data.error);
+        
+        let html = `
+          <div class="info">
+            <div><strong>Dobavljač:</strong><br>${data.dobavljac}</div>
+            <div><strong>Datum:</strong><br>${data.datum_otpremnice}</div>
+            <div><strong>Status:</strong><br><span class="${data.status}">${data.status.toUpperCase()}</span></div>
+          </div>
+          <table>
+            <tr><th>Artikl</th><th>Količina</th><th>Jedinica</th><th>Temp °C</th><th>LOT</th></tr>
+        `;
+        
+        data.artikli.forEach(a => {
+          html += `<tr>
+            <td>${a.naziv}</td>
+            <td>${a.kolicina}</td>
+            <td>${a.jedinica}</td>
+            <td>${a.temperatura?? '-'}</td>
+            <td>${a.lot}</td>
+          </tr>`;
+        });
+        
+        html += `</table>
+          <br>
+          <button onclick="window.print()">Isprintaj Zapisnik</button>
+          <button onclick="copyJson()">Kopiraj JSON</button>
+        `;
+        
+        rezultat.innerHTML = html;
+        window.lastData = data;
+        
       } catch (err) {
-        document.getElementById('result').textContent = 'Greška: ' + err.message;
+        rezultat.innerHTML = `<p style="color:red">Greška: ${err.message}</p>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Skeniraj otpremnicu';
       }
+    }
+    
+    function copyJson() {
+      navigator.clipboard.writeText(JSON.stringify(window.lastData, null, 2));
+      alert('JSON kopiran! Zalijepi u Excel/Sheets');
     }
   </script>
 </body>
