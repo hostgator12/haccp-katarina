@@ -12,6 +12,14 @@ const prompt = `Ti si HACCP asistent. Analiziraj otpremnicu i vrati SAMO JSON be
 Struktura: {"dobavljac": "", "datum_otpremnice": "YYYY-MM-DD", "artikli": [{"naziv": "", "kolicina": 0, "jedinica": "", "temperatura": null, "lot": ""}], "status": "prolaz"}. 
 Ako temperatura nije navedena, stavi null. Ako nešto ne možeš pročitati, stavi "". Status je "prolaz" ako je sve ok, inače "pad".`;
 
+app.get('/models', async (req, res) => {
+  const API_KEY = process.env.GEMINI_API_KEY;
+  const url = `https://generativelanguage.googleapis.com/v1/models?key=${API_KEY}`;
+  const apiRes = await fetch(url);
+  const data = await apiRes.json();
+  res.json(data);
+});
+
 app.post('/api/scan', upload.single('otpremnica'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Nema fajla' });
