@@ -26,14 +26,14 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 async function upisiUSheet(data) {
   const rows = data.artikli.map(a => [
     new Date().toLocaleString('hr-HR'), // Datum skeniranja
-    data.dobavljac,                    // Dobavljač
-    data.datum_otpremnice,             // Datum otpremnice
-    a.naziv,                           // Naziv artikla
-    a.kolicina,                        // Količina
-    a.jedinica,                        // Jedinica mjere
-    a.temperatura,                     // Temperatura
-    a.lot,                             // LOT/Šarža
-    data.status                        // Status
+    data.dobavljac, // Dobavljač
+    data.datum_otpremnice, // Datum otpremnice
+    a.naziv, // Naziv artikla
+    a.kolicina, // Količina
+    a.jedinica, // Jedinica mjere
+    a.temperatura, // Temperatura
+    a.lot, // LOT/Šarža
+    data.status // Status
   ]);
   
   await sheets.spreadsheets.values.append({
@@ -46,10 +46,12 @@ async function upisiUSheet(data) {
   console.log(`Upisano ${rows.length} redova u Sheet`);
 }
 
-// PROMPT optimiziran za Metro + Nikas + općenito
-const prompt = `Ti si HACCP asistent za hrvatske otpremnice. Analiziraj dokument i vrati SAMO JSON bez teksta okolo.
+// PROMPT V3 - optimiziran za Metro Cash & Carry
+const prompt = `Ti si HACCP stručnjak za čitanje Metro Cash & Carry otpremnica. Vrati SAMO JSON bez teksta okolo.
 
-Struktura: {"dobavljac": "", "datum_otpremnice": "YYYY-MM-DD", "artikli": [{"naziv": "", "kolicina": 0, "jedinica": "", "temperatura": null, "lot": ""}], "status": "prolaz"}.
+Struktura: {"dobavljac": "METRO CASH & CARRY", "datum_otpremnice": "YYYY-MM-DD", "artikli": [{"naziv": "", "kolicina": 0, "jedinica": "", "temperatura": null, "lot": ""}], "status": "prolaz"}.
 
-MAPIRANJE POLJA:
-1. DOBAVLJAČ: Traži logo/naz
+KRITIČNA PRAVILA ZA METRO FORMAT:
+
+1. LOT/ŠARŽA - TRAŽI OVDJE:
+   - Ispod naziva
