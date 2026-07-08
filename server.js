@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const { google } = require('googleapis');
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -7,6 +8,38 @@ app.use(express.static('public'));
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
+
+// Google Sheets setup
+const auth = new google.auth.GoogleAuth({
+  credentials: {
+    client_email: process.env.GOOGLE_CLIENT_EMAIL,
+    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  },
+  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+});
+const sheets = google.sheets({ version: 'v4', auth });
+const SHEET_ID = process.env.GOOGLE_SHEET_ID;
+
+async function upisiUSheet(data) {
+  const rows = data.artikli.map(a => [
+    new Date().toLocaleString('hr-HR'),
+    data.dobavljac,
+    data.datum_otpremnice,
+    a.naziv,
+    a.kolicina,
+    a.jedinica,
+    a.temperatura,
+    a.lot,
+    data.status
+  ]);
+  
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'A1',
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: rows },
+  });
+}
 
 const prompt = `Ti si HACCP asistent. Analiziraj otpremnicu i vrati SAMO JSON bez ikakvog teksta okolo.
 Struktura: {"dobavljac": "", "datum_otpremnice": "YYYY-MM-DD", "artikli": [{"naziv": "", "kolicina": 0, "jedinica": "", "temperatura": null, "lot": ""}], "status": "prolaz"}. 
@@ -40,15 +73,17 @@ app.post('/api/scan', upload.single('otpremnica'), async (req, res) => {
     });
 
     const data = await apiRes.json();
-    
     if (data.error) throw new Error(data.error.message);
     
     const text = data.candidates[0].content.parts[0].text;
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('AI nije vratio JSON');
     
-    res.json(JSON.parse(jsonMatch[0]));
+    const jsonData = JSON.parse(jsonMatch[0]);
+    await upisiUSheet(jsonData);
+    res.json(jsonData);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
