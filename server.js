@@ -1,18 +1,12 @@
 const express = require('express');
 const multer = require('multer');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
-app.use(express.static('public'));
 
+app.use(express.static('public'));
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
-
-// VAŽNO: apiVersion: "v1"
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY, { apiVersion: "v1" });
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 const prompt = `Ti si HACCP asistent. Analiziraj otpremnicu i vrati SAMO JSON bez ikakvog teksta okolo.
 Struktura: {"dobavljac": "", "datum_otpremnice": "YYYY-MM-DD", "artikli": [{"naziv": "", "kolicina": 0, "jedinica": "", "temperatura": null, "lot": ""}], "status": "prolaz"}. 
@@ -22,16 +16,34 @@ app.post('/api/scan', upload.single('otpremnica'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Nema fajla' });
     
-    const imagePart = {
-      inlineData: {
-        data: req.file.buffer.toString('base64'),
-        mimeType: req.file.mimetype,
-      },
+    const API_KEY = process.env.GEMINI_API_KEY;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+    
+    const body = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          {
+            inline_data: {
+              mime_type: req.file.mimetype,
+              data: req.file.buffer.toString('base64')
+            }
+          }
+        ]
+      }]
     };
+
+    const apiRes = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const data = await apiRes.json();
     
-    const result = await model.generateContent([prompt, imagePart]);
-    const text = result.response.text();
+    if (data.error) throw new Error(data.error.message);
     
+    const text = data.candidates[0].content.parts[0].text;
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('AI nije vratio JSON');
     
