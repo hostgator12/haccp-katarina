@@ -5,7 +5,7 @@ const fs = require('fs');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY, { apiVersion: "v1" });
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 app.use(express.static('public'));
