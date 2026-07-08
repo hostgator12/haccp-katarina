@@ -41,9 +41,21 @@ async function upisiUSheet(data) {
   });
 }
 
-const prompt = `Ti si HACCP asistent. Analiziraj otpremnicu i vrati SAMO JSON bez ikakvog teksta okolo.
-Struktura: {"dobavljac": "", "datum_otpremnice": "YYYY-MM-DD", "artikli": [{"naziv": "", "kolicina": 0, "jedinica": "", "temperatura": null, "lot": ""}], "status": "prolaz"}. 
-Ako temperatura nije navedena, stavi null. Ako nešto ne možeš pročitati, stavi "". Status je "prolaz" ako je sve ok, inače "pad".`;
+ const prompt = `Ti si HACCP asistent za hrvatske otpremnice. Analiziraj dokument i vrati SAMO JSON bez teksta okolo.
+
+Struktura: {"dobavljac": "", "datum_otpremnice": "YYYY-MM-DD", "artikli": [{"naziv": "", "kolicina": 0, "jedinica": "", "temperatura": null, "lot": ""}], "status": "prolaz"}.
+
+PRAVILA ZA LOT/BROJ SERIJE:
+- Traži: "LOT", "Lot", "Šarža", "Serija", "L/B", "Broj serije", "Batch"
+- Često je u malom fontu ispod naziva artikla ili u zasebnom stupcu desno
+- Ako ga nema nigdje, stavi ""
+- Nikad ne izmišljaj LOT
+
+TEMPERATURA: Ako piše "Amb" ili nema, stavi null. Ako piše broj tipa "4°C", stavi 4.
+
+DOBAVLJAČ: Traži logo/naziv firme na vrhu. Metro = "Metro Cash & Carry"
+
+Ako nešto ne možeš pročitati, stavi "". Status je "prolaz" ako je sve ok, inače "pad".`;
 
 app.post('/api/scan', upload.single('otpremnica'), async (req, res) => {
   try {
