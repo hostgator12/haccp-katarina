@@ -9,7 +9,9 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
 app.use(express.static('public'));
-
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
 app.post('/api/scan', upload.single('otpremnica'), async (req, res) => {
   try {
     const imagePath = req.file.path;
